@@ -9,19 +9,19 @@ import torch.nn as nn
 # Load the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
-model = UNet(1, in_channels=1, start_filts=75, depth=4)
+model = UNet(1, in_channels=1, start_filts=64, depth=5)
 # model = nn.DataParallel(model)
-model.load_state_dict(torch.load('unet_model.pt', weights_only=True))
+model.load_state_dict(torch.load('unet_model_200epoch_noTransform.pt', weights_only=True, map_location=device))
 model.to(device)
 model.eval()
 
 # Load the low-quality image
-low_image = cv2.imread('/var/home/jakub/Obrazy/apt_training_set/low_quality/low_noaa-15-201111181355-norm.jpg', cv2.IMREAD_GRAYSCALE)
+low_image = cv2.imread('/var/home/jakub/Muzyka/gqrx/08.06.2024_09:59/raw_sync.png', cv2.IMREAD_GRAYSCALE)
 actual_image = cv2.imread('/var/home/jakub/Obrazy/apt_training_set/high_quality/noaa-18-201703120714-norm.jpg', cv2.IMREAD_GRAYSCALE)
 
 # Define the patch size and overlap
 patch_size = 256
-overlap = 128
+overlap = 0
 
 # Calculate the step size
 step_size = patch_size - overlap
@@ -44,7 +44,8 @@ for i in range(0, low_image.shape[0], step_size):
         # Pass the patch through the model
         patch = patch.astype('float32') / 255.0
         patch = torch.from_numpy(patch).unsqueeze(0).unsqueeze(0).to(device)
-        output_patch = model(patch)
+        with torch.no_grad():
+            output_patch = model(patch)
         output_patch = output_patch.squeeze(0).squeeze(0).cpu().detach().numpy()
 
         # Add the output patch to the list
